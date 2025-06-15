@@ -1,18 +1,16 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
-import 'package:bloc/bloc.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:connectivitypoc/bloc/internet/internet_event.dart';
+import 'package:connectivitypoc/bloc/internet/internet_state.dart';
 import 'package:flutter/services.dart';
-
-part 'internet_event.dart';
-part 'internet_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class InternetBloc extends Bloc<InternetEvent, InternetState> {
   final Connectivity _connectivity = Connectivity();
   StreamSubscription<List<ConnectivityResult>>? _subscription;
 
-  InternetBloc() : super(InternetState.initial()) {
+  InternetBloc() : super(const InternetOffline()) {
     on<InternetObserveRequested>(_onObserveRequested);
     on<InternetConnectionChanged>(_onConnectionChanged);
   }
@@ -23,13 +21,13 @@ class InternetBloc extends Bloc<InternetEvent, InternetState> {
   ) async {
     try {
       final result = await _connectivity.checkConnectivity();
-      emit(state.copyWith(connectionResults: result));
+      _emitConnectionState(result, emit);
 
       _subscription = _connectivity.onConnectivityChanged.listen((result) {
         add(InternetConnectionChanged(result));
       });
     } on PlatformException catch (e) {
-      developer.log('Couldn\'t check connectivity status', error: e);
+      print(e.toString());
     }
   }
 
@@ -37,8 +35,21 @@ class InternetBloc extends Bloc<InternetEvent, InternetState> {
     InternetConnectionChanged event,
     Emitter<InternetState> emit,
   ) {
-    emit(state.copyWith(connectionResults: event.connectionResults));
-    print('Connectivity changed: ${event.connectionResults}');
+    _emitConnectionState(event.connectionResults, emit);
+  }
+
+  void _emitConnectionState(
+    List<ConnectivityResult> results,
+    Emitter<InternetState> emit,
+  ) {
+    // If any of the result is not 'none', we consider it online
+    final isOnline = results.any((r) => r != ConnectivityResult.none);
+
+    if (isOnline) {
+      emit(InternetOnline(results));
+    } else {
+      emit(const InternetOffline());
+    }
   }
 
   @override

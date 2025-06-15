@@ -1,18 +1,15 @@
-part of 'internet_bloc.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
-class InternetState {
+abstract class InternetState {
+  const InternetState();
+}
+
+class InternetOnline extends InternetState {
   final List<ConnectivityResult> connectionResults;
 
-  const InternetState({required this.connectionResults});
+  const InternetOnline(this.connectionResults);
+}
 
-  factory InternetState.initial() =>
-      const InternetState(connectionResults: [ConnectivityResult.none]);
-
-  InternetState copyWith({
-    List<ConnectivityResult>? connectionResults,
-  }) {
-    return InternetState(
-      connectionResults: connectionResults ?? this.connectionResults,
-    );
-  }
+class InternetOffline extends InternetState {
+  const InternetOffline();
 }
